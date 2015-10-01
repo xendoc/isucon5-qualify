@@ -264,7 +264,6 @@ SQL
     footprints_query = <<SQL
 SELECT user_id, owner_id, date, created_at as updated
 FROM footprints
-FORCE INDEX(crated_at_user_id)
 WHERE user_id = ?
 GROUP BY user_id, owner_id, date
 ORDER BY created_at DESC
@@ -370,7 +369,6 @@ SQL
     query = <<SQL
 SELECT user_id, owner_id, date, created_at as updated
 FROM footprints
-FORCE INDEX(crated_at_user_id)
 WHERE user_id = ?
 GROUP BY user_id, owner_id, date
 ORDER BY created_at DESC

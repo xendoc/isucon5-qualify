@@ -6,7 +6,7 @@ CREATE TABLE `footprints2` (
   `date` DATE NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
-  KEY `crated_at_user_id` (`created_at`, `user_id`),
+  KEY `user_id_created_at` (`user_id`,`created_at`),
   UNIQUE `user_id_owner_id_date` (`user_id`, `owner_id`, `date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 INSERT INTO `footprints2` (`id`,`user_id`,`owner_id`,`date`,`created_at`)
