@@ -339,11 +339,9 @@ SQL
     authenticated!
     entry = db.xquery('SELECT * FROM entries WHERE id = ?', params['entry_id']).first
     raise Isucon5::ContentNotFound unless entry
-    entry[:is_private] = (entry[:private] == 1)
     owner = get_user(entry[:user_id])
-    if entry[:is_private] && !permitted?(owner[:id])
-      raise Isucon5::PermissionDenied
-    end
+    entry[:is_private] = (entry[:private] == 1)
+    raise Isucon5::PermissionDenied if entry[:is_private] && !permitted?(owner[:id])
     comments = db.xquery('SELECT * FROM comments WHERE entry_id = ?', entry[:id])
     mark_footprint(owner[:id])
     erb :entry, locals: { owner: owner, entry: entry, comments: comments }
@@ -359,13 +357,9 @@ SQL
   post '/diary/comment/:entry_id' do
     authenticated!
     entry = db.xquery('SELECT * FROM entries WHERE id = ?', params['entry_id']).first
-    unless entry
-      raise Isucon5::ContentNotFound
-    end
+    raise Isucon5::ContentNotFound unless entry
     entry[:is_private] = (entry[:private] == 1)
-    if entry[:is_private] && !permitted?(entry[:user_id])
-      raise Isucon5::PermissionDenied
-    end
+    raise Isucon5::PermissionDenied if entry[:is_private] && !permitted?(entry[:user_id])
     query = 'INSERT INTO comments (entry_id, user_id, entry_user_id, comment) VALUES (?,?,?,?)'
     db.xquery(query, entry[:id], current_user[:id], entry[:user_id], params['comment'])
     redirect "/diary/entry/#{entry[:id]}"
@@ -388,13 +382,8 @@ SQL
 
   get '/friends' do
     authenticated!
-    query = 'SELECT * FROM relations WHERE one = ? OR another = ? ORDER BY created_at DESC'
-    friends = {}
-    db.xquery(query, current_user[:id], current_user[:id]).each do |rel|
-      key = (rel[:one] == current_user[:id] ? :another : :one)
-      friends[rel[key]] ||= rel[:created_at]
-    end
-    list = friends.map{|user_id, created_at| [user_id, created_at]}
+    query = 'SELECT another,created_at FROM relations WHERE one = ? ORDER BY created_at DESC'
+    list = db.xquery(query, current_user[:id]).map { |row| [row[:another], row[:created_at]] }
     erb :friends, locals: { friends: list }
   end
 
