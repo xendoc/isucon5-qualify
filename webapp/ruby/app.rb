@@ -145,7 +145,10 @@ class Isucon5::WebApp < Sinatra::Base
 
     def mark_footprint(user_id)
       if user_id != current_user[:id]
-        query = 'INSERT INTO footprints (user_id,owner_id) VALUES (?,?)'
+        query = <<SQL
+REPLACE INTO footprints (user_id,owner_id,date)
+VALUES (?,?,DATE(NOW()))
+SQL
         db.xquery(query, user_id, current_user[:id])
       end
     end
@@ -257,25 +260,17 @@ SQL
     end
 
     friends = get_friends
-=begin
-    friends_query = 'SELECT * FROM relations WHERE one = ? OR another = ? ORDER BY created_at DESC'
-    friends_map = {}
-    db.xquery(friends_query, current_user[:id], current_user[:id]).each do |rel|
-      key = (rel[:one] == current_user[:id] ? :another : :one)
-      friends_map[rel[key]] ||= rel[:created_at]
-    end
-    friends = friends_map.map{|user_id, created_at| [user_id, created_at]}
-=end
 
-    query = <<SQL
-SELECT user_id, owner_id, DATE(created_at) AS date, MAX(created_at) AS updated
+    footprints_query = <<SQL
+SELECT user_id, owner_id, date, created_at as updated
 FROM footprints
+FORCE INDEX(crated_at_user_id)
 WHERE user_id = ?
-GROUP BY user_id, owner_id, DATE(created_at)
-ORDER BY updated DESC
+GROUP BY user_id, owner_id, date
+ORDER BY created_at DESC
 LIMIT 10
 SQL
-    footprints = db.xquery(query, current_user[:id])
+    footprints = db.xquery(footprints_query, current_user[:id])
 
     locals = {
       profile: profile || {},
@@ -374,11 +369,12 @@ SQL
   get '/footprints' do
     authenticated!
     query = <<SQL
-SELECT user_id, owner_id, DATE(created_at) AS date, MAX(created_at) as updated
+SELECT user_id, owner_id, date, created_at as updated
 FROM footprints
+FORCE INDEX(crated_at_user_id)
 WHERE user_id = ?
-GROUP BY user_id, owner_id, DATE(created_at)
-ORDER BY updated DESC
+GROUP BY user_id, owner_id, date
+ORDER BY created_at DESC
 LIMIT 50
 SQL
     footprints = db.xquery(query, current_user[:id])
@@ -411,7 +407,7 @@ SQL
 
   get '/initialize' do
     db.query("DELETE FROM relations WHERE id > 500000")
-    db.query("DELETE FROM footprints WHERE id > 500000")
+    db.query("DELETE FROM footprints WHERE id > 499995")
     db.query("DELETE FROM entries WHERE id > 500000")
     db.query("DELETE FROM comments WHERE id > 1500000")
   end
