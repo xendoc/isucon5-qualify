@@ -63,18 +63,19 @@ class Isucon5::WebApp < Sinatra::Base
     end
 
     def authenticate(email, password)
-      query = <<SQL
-SELECT u.id AS id, u.account_name AS account_name, u.nick_name AS nick_name, u.email AS email
-FROM users u
-JOIN salts s ON u.id = s.user_id
-WHERE u.email = ? AND u.passhash = SHA2(CONCAT(?, s.salt), 512)
-SQL
-      result = db.xquery(query, email, password).first
-      unless result
-        raise Isucon5::AuthenticationError
-      end
-      session[:user_id] = result[:id]
-      result
+      raise Isucon5::AuthenticationError unless USER_EMAILS[email]
+      raise Isucon5::AuthenticationError unless USERS[USER_EMAILS[email]][4] == hash(password, USERS[USER_EMAILS[email]][5])
+      session[:user_id] = USERS[USER_EMAILS[email]][0]
+      {
+        id: USERS[USER_EMAILS[email]][0],
+        account_name: USERS[USER_EMAILS[email]][1],
+        nick_name: USERS[USER_EMAILS[email]][2],
+        email: USERS[USER_EMAILS[email]][3]
+      }
+    end
+
+    def hash(password, salt)
+      Digest::SHA512.hexdigest("#{password}#{salt}")
     end
 
     def current_user
@@ -82,7 +83,12 @@ SQL
       unless session[:user_id]
         return nil
       end
-      @user = db.xquery('SELECT id, account_name, nick_name, email FROM users WHERE id=?', session[:user_id]).first
+      @user = {
+        id: USERS[USER_IDS[session[:user_id]]][0],
+        account_name: USERS[USER_IDS[session[:user_id]]][1],
+        nick_name: USERS[USER_IDS[session[:user_id]]][2],
+        email: USERS[USER_IDS[session[:user_id]]][3]
+      }
       unless @user
         session[:user_id] = nil
         session.clear
@@ -92,21 +98,29 @@ SQL
     end
 
     def authenticated!
-      unless current_user
-        redirect '/login'
-      end
+      redirect '/login' unless current_user
     end
 
     def get_user(user_id)
-      user = db.xquery('SELECT * FROM users WHERE id = ?', user_id).first
-      raise Isucon5::ContentNotFound unless user
-      user
+      raise Isucon5::ContentNotFound unless USER_IDS[user_id]
+      {
+        id: USERS[USER_IDS[user_id]][0],
+        account_name: USERS[USER_IDS[user_id]][1],
+        nick_name: USERS[USER_IDS[user_id]][2],
+        email: USERS[USER_IDS[user_id]][3],
+        passhash: USERS[USER_IDS[user_id]][4]
+      }
     end
 
     def user_from_account(account_name)
-      user = db.xquery('SELECT * FROM users WHERE account_name = ?', account_name).first
-      raise Isucon5::ContentNotFound unless user
-      user
+      raise Isucon5::ContentNotFound unless USERS[account_name]
+      {
+        id: USERS[account_name][0],
+        account_name: USERS[account_name][1],
+        nick_name: USERS[account_name][2],
+        email: USERS[account_name][3],
+        passhash: USERS[account_name][4]
+      }
     end
 
     def is_friend?(another_id)
