@@ -17,11 +17,18 @@ module Isucon5
 end
 
 class Isucon5::WebApp < Sinatra::Base
-  use Rack::Session::Cookie
+  use Rack::Session::Cookie,
+    coder: Class.new {
+      def encode(str)
+        ::Marshal.dump(str)
+      end
+      def decode(str)
+        return unless str
+        ::Marshal.load(str) rescue nil
+      end
+    }.new
   set :erb, escape_html: true
   set :public_folder, File.expand_path('../../static', __FILE__)
-  #set :sessions, true
-  set :session_secret, ENV['ISUCON5_SESSION_SECRET'] || 'beermoris'
   set :protection, true
 
   helpers do
