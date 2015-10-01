@@ -4,8 +4,8 @@ require "socket"
 MYHOSTNAME = Socket.gethostname
 
 MANAGER_ADDRESS = "localhost"
-MANAGER_USER = "portalsan"
-MANAGER_PASSWORD = "tony-morris"
+MANAGER_USER = "root"
+MANAGER_PASSWORD = ""
 
 require "timeout"
 require "mysql2-cs-bind"
