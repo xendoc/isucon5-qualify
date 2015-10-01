@@ -327,8 +327,12 @@ SQL
       entry[:is_private] = (entry[:private] == 1)
       entry
     end
+    query = <<SQL
+SELECT entry_id, COUNT(*) AS cnt FROM comments WHERE entry_id IN (?) GROUP BY entry_id
+SQL
+    counts = db.xquery(query, [ entries.map { |e| e[:id] } ]).map { |row| [row[:entry_id], row[:cnt]] }.to_h
     mark_footprint(owner[:id])
-    erb :entries, locals: { owner: owner, entries: entries, myself: (current_user[:id] == owner[:id]) }
+    erb :entries, locals: { owner: owner, entries: entries, counts: counts, myself: (current_user[:id] == owner[:id]) }
   end
 
   get '/diary/entry/:entry_id' do
