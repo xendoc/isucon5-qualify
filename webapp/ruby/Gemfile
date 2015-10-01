@@ -6,4 +6,8 @@ gem "mysql2"
 gem "mysql2-cs-bind"
 gem "erubis"
 gem "unicorn", require: false
-gem "rerun", require: false
+
+group :development do
+  gem "rack-lineprof"
+  gem "rerun", require: false
+end
