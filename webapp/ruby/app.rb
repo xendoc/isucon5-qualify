@@ -187,9 +187,7 @@ class Isucon5::WebApp < Sinatra::Base
 
   get '/' do
     authenticated!
-
     profile = db.xquery('SELECT * FROM profiles WHERE user_id = ?', current_user[:id]).first
-
     entries_query = 'SELECT * FROM entries WHERE user_id = ? ORDER BY created_at LIMIT 5'
     entries = db.xquery(entries_query, current_user[:id])
       .map{ |entry| entry[:is_private] = (entry[:private] == 1); entry[:title], entry[:content] = entry[:body].split(/\n/, 2); entry }
@@ -270,25 +268,12 @@ SQL
 
   post '/profile/:account_name' do
     authenticated!
-    if params['account_name'] != current_user[:account_name]
-      raise Isucon5::PermissionDenied
-    end
-    args = [params['first_name'], params['last_name'], params['sex'], params['birthday'], params['pref']]
-
-    prof = db.xquery('SELECT * FROM profiles WHERE user_id = ?', current_user[:id]).first
-    if prof
-      query = <<SQL
-UPDATE profiles
-SET first_name=?, last_name=?, sex=?, birthday=?, pref=?, updated_at=CURRENT_TIMESTAMP()
-WHERE user_id = ?
+    raise Isucon5::PermissionDenied if params['account_name'] != current_user[:account_name]
+    args = [current_user[:id], params['first_name'], params['last_name'], params['sex'], params['birthday'], params['pref']]
+    query = <<SQL
+REPLACE INTO profiles (user_id, first_name, last_name, sex, birthday, pref, updated_at)
+VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP())
 SQL
-      args << current_user[:id]
-    else
-      query = <<SQL
-INSERT INTO profiles (user_id,first_name,last_name,sex,birthday,pref) VALUES (?,?,?,?,?,?)
-SQL
-      args.unshift(current_user[:id])
-    end
     db.xquery(query, *args)
     redirect "/profile/#{params['account_name']}"
   end
