@@ -3,6 +3,7 @@ require 'mysql2'
 require 'mysql2-cs-bind'
 require 'tilt/erubis'
 require 'erubis'
+require './users.rb'
 
 module Isucon5
   class AuthenticationError < StandardError; end
