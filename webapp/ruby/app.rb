@@ -223,25 +223,19 @@ SQL
     comments_of_friends_query = <<SQL
 SELECT * FROM (
   (
-  SELECT id,user_id,entry_id,entry_user_id,comment,created_at,0 AS private FROM comments
+    SELECT id,user_id,entry_id,entry_user_id,comment,created_at,entry_private AS private
+    FROM comments
     WHERE user_id in (?)
-    AND EXISTS (
-      SELECT id FROM entries e
-      WHERE entry_id = e.id
-      AND e.private = 0
-    )
+    AND entry_private = 0
     ORDER BY created_at DESC
     LIMIT 10
   )
 UNION
   (
-    SELECT id,user_id,entry_id,entry_user_id,comment,created_at,1 AS private FROM comments
+    SELECT id,user_id,entry_id,entry_user_id,comment,created_at,entry_private AS private
+    FROM comments
     WHERE user_id in (?)
-    AND EXISTS (
-      SELECT id FROM entries e
-      WHERE entry_id = e.id
-      AND e.private = 1
-    )
+    AND entry_private = 1
     ORDER BY created_at DESC
     LIMIT 10
   )

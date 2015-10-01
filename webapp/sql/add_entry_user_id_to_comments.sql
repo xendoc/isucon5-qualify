@@ -1,4 +1,8 @@
-ALTER TABLE comments ADD entry_user_id INT NOT NULL ADD INDEX entry_user_id (entry_user_id, created_at);
+ALTER TABLE comments ADD `entry_user_id` INT NOT NULL,
+  ADD `entry_private` tinyint NOT NULL,
+  DROP INDEX `created_at`,
+  ADD INDEX `entry_user_id_created_at` (`entry_user_id`, `created_at`),
+  ADD INDEX `created_at_user_id_entry_private` (`created_at`,`user_id`,`entry_private`);
 
 /home/isucon/.local/ruby/bin/bundle exec ruby add_entry_user_id.rb
 ```add_entry_user_id.rb
@@ -26,12 +30,13 @@ db = Mysql2::Client.new(
 5000.times do |i|
   user_id = i + 1
   query = <<SQL
-SELECT id FROM entries WHERE user_id = ?
+SELECT id, private FROM entries WHERE user_id = ?
 SQL
-  entry_ids = db.xquery(query, user_id).map { |e| e['id'] }
-  query = <<SQL
-UPDATE comments SET entry_user_id = ? WHERE entry_id IN (?)
+  db.xquery(query, user_id).each do |entry|
+    query = <<SQL
+UPDATE comments SET entry_user_id = ?, entry_private = ? WHERE entry_id = ?
 SQL
-  db.xquery(query, user_id, [entry_ids])
+    db.xquery(query, user_id, entry['private'], entry['id'])
+    end
 end
 ```
