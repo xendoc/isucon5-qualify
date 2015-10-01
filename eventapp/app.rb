@@ -30,10 +30,10 @@ class Isucon5Portal::WebApp < Sinatra::Base
 
   IN_PROCESS_CACHE_TIMEOUT = 30
 
-  SATURDAY = [Time.parse("2015-09-26 08:00:00"), Time.parse("2015-09-26 19:00:00")]
-  SUNDAY   = [Time.parse("2015-09-27 08:00:00"), Time.parse("2015-09-27 18:00:00")]
-  SATURDAY_GAMETIME = [Time.parse("2015-09-26 11:00:00"), Time.parse("2015-09-26 19:00:00")]
-  SUNDAY_GAMETIME   = [Time.parse("2015-09-27 10:00:00"), Time.parse("2015-09-27 18:00:00")]
+  SATURDAY = [Time.parse("2015-09-26 08:00:00"), Time.parse("2020-09-26 19:00:00")]
+  SUNDAY   = [Time.parse("2015-09-27 08:00:00"), Time.parse("2020-09-27 18:00:00")]
+  SATURDAY_GAMETIME = [Time.parse("2015-09-26 11:00:00"), Time.parse("2020-09-26 19:00:00")]
+  SUNDAY_GAMETIME   = [Time.parse("2015-09-27 10:00:00"), Time.parse("2020-09-27 18:00:00")]
 
   helpers do
     def config
