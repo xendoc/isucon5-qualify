@@ -9,3 +9,4 @@ target
 .bundle
 vendor
 .rbenv*
+tmp
