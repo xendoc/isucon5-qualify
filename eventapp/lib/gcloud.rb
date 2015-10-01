@@ -67,7 +67,7 @@ module Isucon5Portal::GCloud
         "fingerprint"=>"bBkb9akTNGc=",
         "items"=>[
           { "key"=>"sshKeys",
-            "value"=>"root:ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCwttspGr+7FLz0f6d/Cfd2o5MzQ11+0/De7Kh2bm6XLfu7M2cRk3KL8FuvJ8a8ZgAbB/PiUEDRaqXo2UU54gzJYOmlILM7yu8J/U2iJrIDK0MPc53xLJHzk+PzBRqWvVsW2PwsIqykV7sgRVgIHc4wN7+OZzdiTdKe5wnfWxYs4jx46MAxkfv81fk2FHekqf4P/dZUIJBtS1UiCjw8O2cuaGHWkMHYLUeo18PR3yQR9zKW/5cxhYXTArNRtQBwTLXQtQCh/EDYjGwnEqs/KY+Vss4933pET2HphnzG2m32t0YCQ4Epb9sAwxB0aqxN3IPD0kLtVpzMgOHG1pyXdhQ5 root@base-image.isucon.net"}
+            "value"=>"root:ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDAqV5m5JPu2/FPJ77JhBUP9xNtEV3pSTj+HIw5DSQ80Y/LhCu7ewGZSBB71FoVR6Sty6F+QIWgvR61PO1SJDY9a6kNRMnnZ0LS28pdYuUtSIaXg+GrMpRc1ZgXPm5fAyQq7A4R9dqAONlDvz4eGy2c6rIO4uLJ1g8tjq54mR7JsP9HO5VjZkavtq/oLFfzimVCIm/Do9NbIn4rewOzg51ggdmXA0kw2HFnFBE9mjUAyfN76FIbCuXOnE6q4fqoVcOz8FngTigokZSpEvwRFWmdJ6WN8Zakn9q2npb7Zypwzz6PoGbNWWkRtj/Z4TYafNdyZO0WxHZ7DMg/CYBZ9GgZ root@base-image.isucon.net"}
         ],
         "kind"=>"compute#metadata"
       },
