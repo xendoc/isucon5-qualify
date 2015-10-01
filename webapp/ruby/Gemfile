@@ -5,4 +5,5 @@ gem "sinatra"
 gem "mysql2"
 gem "mysql2-cs-bind"
 gem "erubis"
-gem "unicorn"
+gem "unicorn", require: false
+gem "rerun", require: false
