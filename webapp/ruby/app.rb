@@ -287,9 +287,10 @@ SQL
   get '/profile/:account_name' do
     authenticated!
     owner = user_from_account(params['account_name'])
-    prof = db.xquery('SELECT * FROM profiles WHERE user_id = ?', owner[:id]).first
-    prof = {} unless prof
-    query = if permitted?(owner[:id])
+    prof = db.xquery('SELECT * FROM profiles WHERE user_id = ?', owner[:id]).first || {}
+    permitted = permitted?(owner[:id])
+
+    query = if permitted
               'SELECT * FROM entries WHERE user_id = ? ORDER BY created_at LIMIT 5'
             else
               'SELECT * FROM entries WHERE user_id = ? AND private=0 ORDER BY created_at LIMIT 5'
@@ -299,7 +300,7 @@ SQL
       entry
     end
     mark_footprint(owner[:id])
-    erb :profile, locals: { owner: owner, profile: prof, entries: entries, private: permitted?(owner[:id]) }
+    erb :profile, locals: { owner: owner, profile: prof, entries: entries, private: permitted }
   end
 
   post '/profile/:account_name' do

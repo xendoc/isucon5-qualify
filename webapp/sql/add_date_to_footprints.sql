@@ -17,6 +17,9 @@ SELECT
   DATE(f.created_at) AS date,
   MAX(f.created_at) AS updated
 FROM footprints f
-GROUP BY user_id, owner_id, DATE(created_at)
+GROUP BY user_id, owner_id, DATE(created_at);
 DROP TABLE `footprints`;
 ALTER TABLE `footprints2` RENAME `footprints`;
+
+# TODO initialize
+# DELETE FROM footprints WHERE id > 499995;

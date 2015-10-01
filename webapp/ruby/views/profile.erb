@@ -18,7 +18,6 @@
 <h2><%= owner[:nick_name] %>さんの日記</h2>
 <div class="row" id="prof-entries">
   <% entries.each do |entry| %>
-  <% if !entry[:is_private] || private %>
   <div class="panel panel-primary entry">
     <div class="entry-title">タイトル: <a href="/diary/entry/<%= entry[:id] %>"><%= entry[:title] %></a></div>
     <div class="entry-content">
@@ -28,7 +27,6 @@
     </div>
     <div class="entry-created-at">更新日時: <%= entry[:created_at] %></div>
   </div>
-  <% end %>
   <% end %>
 </div>
 
@@ -67,5 +65,3 @@
   </form>
 </div>
 <% end %>
-
-
