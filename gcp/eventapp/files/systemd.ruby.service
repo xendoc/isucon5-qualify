@@ -3,7 +3,7 @@ Description=bench-ruby
 After=syslog.target
 
 [Service]
-WorkingDirectory=/home/xendoc/isucon5-qualify/eventapp
+WorkingDirectory=/home/isucon/isucon5-qualify/eventapp
 EnvironmentFile=/home/isucon/env.bench.sh
 User=isucon
 
