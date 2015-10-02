@@ -206,6 +206,11 @@ SQL
 
   get '/' do
     authenticated!
+    html = kvs.get("index:#{current_user[:id]}")
+
+puts "html", html
+
+    return html if html
     profile = db.xquery('SELECT * FROM profiles WHERE user_id = ?', current_user[:id]).first
     entries_query = 'SELECT id,title FROM entries WHERE user_id = ? ORDER BY created_at LIMIT 5'
     entries = db.xquery(entries_query, current_user[:id]).map do |entry|
@@ -277,7 +282,10 @@ SQL
       friends: friends,
       footprints: footprints
     }
-    erb :index, locals: locals
+    html = erb(:index, locals: locals)
+    kvs.set("index:#{current_user[:id]}", html)
+    kvs.expire("index:#{current_user[:id]}", 1)
+    html
   end
 
   # cache
