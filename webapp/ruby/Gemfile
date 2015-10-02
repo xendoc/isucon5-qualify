@@ -8,6 +8,6 @@ gem "erubis"
 gem "unicorn", require: false
 
 group :development do
-  gem "rack-lineprof"
+  gem "rack-mini-profiler"
   gem "rerun", require: false
 end
