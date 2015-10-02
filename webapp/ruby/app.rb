@@ -283,8 +283,7 @@ SQL
       footprints: footprints
     }
     html = erb(:index, locals: locals)
-    kvs.set("index:#{current_user[:id]}", html)
-    kvs.expire("index:#{current_user[:id]}", 1)
+    kvs.setex("index:#{current_user[:id]}", 1, html)
     html
   end
 
