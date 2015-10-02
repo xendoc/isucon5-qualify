@@ -206,10 +206,7 @@ SQL
 
   get '/' do
     authenticated!
-    html = kvs.get("index:#{current_user[:id]}")
-
-puts "html", html
-
+    html = kvs.get("html:index:#{current_user[:id]}")
     return html if html
     profile = db.xquery('SELECT * FROM profiles WHERE user_id = ?', current_user[:id]).first
     entries_query = 'SELECT id,title FROM entries WHERE user_id = ? ORDER BY created_at LIMIT 5'
@@ -283,7 +280,7 @@ SQL
       footprints: footprints
     }
     html = erb(:index, locals: locals)
-    kvs.setex("index:#{current_user[:id]}", 1, html)
+    kvs.setex("html:index:#{current_user[:id]}", 1, html)
     html
   end
 
@@ -386,12 +383,15 @@ SQL
 
   get '/friends' do
     authenticated!
-
+    html = kvs.get("html:friends:#{current_user[:id]}")
+    return html if html
     list = []
     kvs.hgetall("friends:#{current_user[:id]}").each do |user_id, created_at|
       list.unshift([user_id.to_i, created_at])
     end
-    erb :friends, locals: { friends: list }
+    html = erb(:friends, locals: { friends: list })
+    kvs.setex("html:friends:#{current_user[:id]}", 60, html)
+    html
   end
 
   post '/friends/:account_name' do
@@ -401,7 +401,9 @@ SQL
       raise Isucon5::ContentNotFound unless user
       t = Time.now.strftime("%F %T")
       kvs.hset("friends:#{current_user[:id]}", user[:id], t)
+      kvs.del("html:friends:#{current_user[:id]}")
       kvs.hset("friends:#{user[:id]}", current_user[:id], t)
+      kvs.del("html:friends:#{user[:id]}")
       redirect '/friends'
     end
   end
