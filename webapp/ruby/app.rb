@@ -3,6 +3,7 @@ require 'mysql2'
 require 'mysql2-cs-bind'
 require 'tilt/erubis'
 require 'erubis'
+require 'redis'
 require './users.rb'
 require 'rack-mini-profiler' if ENV['RACK_ENV'] == 'development'
 
@@ -43,8 +44,11 @@ class Isucon5::WebApp < Sinatra::Base
           username: ENV['ISUCON5_DB_USER'] || 'root',
           password: ENV['ISUCON5_DB_PASSWORD'],
           database: ENV['ISUCON5_DB_NAME'] || 'isucon5q',
-          socket_path: ENV['RACK_ENV'] == 'development' ? '/tmp/mysql.sock' : '/var/run/mysqld/mysqld.sock'
+          socket: ENV['RACK_ENV'] == 'development' ? '/tmp/mysql.sock' : '/var/run/mysqld/mysqld.sock'
         },
+        kvs: {
+          path: ENV['RACK_ENV'] == 'development' ? '/tmp/redis.sock' : '/var/run/redis/redis.sock'
+        }
       }
     end
 
@@ -53,7 +57,7 @@ class Isucon5::WebApp < Sinatra::Base
       client = Mysql2::Client.new(
         #host: config[:db][:host],
         #port: config[:db][:port],
-        socket: config[:db][:socket_path],
+        socket: config[:db][:socket],
         username: config[:db][:username],
         password: config[:db][:password],
         database: config[:db][:database],
@@ -62,6 +66,10 @@ class Isucon5::WebApp < Sinatra::Base
       client.query_options.merge!(symbolize_keys: true)
       Thread.current[:isucon5_db] = client
       client
+    end
+
+    def kvs
+      @redis ||= Redis.new(path: config[:kvs][:path], driver: :hiredis)
     end
 
     def authenticate(email, password)
@@ -128,14 +136,12 @@ class Isucon5::WebApp < Sinatra::Base
     def is_friend?(another_id)
       return false unless session[:user_id]
       get_friends unless @friends
-      @friends.include?(another_id)
+      @friends.include?(another_id.to_s)
     end
 
     # TODO cache
     def get_friends
-      query = 'SELECT another FROM relations WHERE one = ?'
-      @friends ||= db.xquery(query, session[:user_id]).map { |row| row[:another] }
-      @friends
+      @friends ||= kvs.hkeys("friends:#{session[:user_id]}")
     end
 
     def is_friend_account?(account_name)
@@ -373,8 +379,11 @@ SQL
 
   get '/friends' do
     authenticated!
-    query = 'SELECT another,created_at FROM relations WHERE one = ? ORDER BY created_at DESC'
-    list = db.xquery(query, current_user[:id]).map { |row| [row[:another], row[:created_at]] }
+
+    list = []
+    kvs.hgetall("friends:#{current_user[:id]}").each do |user_id, created_at|
+      list.unshift([user_id.to_i, created_at])
+    end
     erb :friends, locals: { friends: list }
   end
 
@@ -382,18 +391,32 @@ SQL
     authenticated!
     unless is_friend_account?(params['account_name'])
       user = user_from_account(params['account_name'])
-      unless user
-        raise Isucon5::ContentNotFound
-      end
-      db.xquery('INSERT INTO relations (one, another) VALUES (?,?), (?,?)', current_user[:id], user[:id], user[:id], current_user[:id])
+      raise Isucon5::ContentNotFound unless user
+      t = Time.now.strftime("%F %T")
+      kvs.mset("friends:#{current_user[:id]}", user[:id], t)
+      kvs.mset("friends:#{user[:id]}", current_user[:id], t)
       redirect '/friends'
     end
   end
 
   get '/initialize' do
-    db.query("DELETE FROM relations WHERE id > 500000")
+    #kvs.flushall
     db.query("DELETE FROM footprints WHERE id > 499995")
     db.query("DELETE FROM entries WHERE id > 500000")
     db.query("DELETE FROM comments WHERE id > 1500000")
+  end
+
+  get '/kvs' do
+    kvs.flushall
+    # init friends
+    db.query("DELETE FROM relations WHERE id > 500000")
+    USER_IDS.keys.each do |id|
+      # 古い順で取得
+      query = 'SELECT another,created_at FROM relations WHERE one = ? ORDER BY created_at ASC'
+      list = []
+      db.xquery(query, id).each { |row| list.push row[:another], row[:created_at] }
+      kvs.hmset("friends:#{id}", list)
+    end
+    ""
   end
 end

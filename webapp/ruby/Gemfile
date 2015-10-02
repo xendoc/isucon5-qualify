@@ -5,9 +5,11 @@ gem "sinatra"
 gem "mysql2"
 gem "mysql2-cs-bind"
 gem "erubis"
-gem "unicorn", require: false
+gem "redis"
+gem "hiredis"
+gem "unicorn"
 
 group :development do
-  gem "rack-mini-profiler"
+  gem "rack-mini-profiler", require: false
   gem "rerun", require: false
 end
