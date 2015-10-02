@@ -400,13 +400,6 @@ SQL
   end
 
   get '/initialize' do
-    #kvs.flushall
-    db.query("DELETE FROM footprints WHERE id > 499995")
-    db.query("DELETE FROM entries WHERE id > 500000")
-    db.query("DELETE FROM comments WHERE id > 1500000")
-  end
-
-  get '/kvs' do
     kvs.flushall
     # init friends
     db.query("DELETE FROM relations WHERE id > 500000")
@@ -417,6 +410,8 @@ SQL
       db.xquery(query, id).each { |row| list.push row[:another], row[:created_at] }
       kvs.hmset("friends:#{id}", list)
     end
-    ""
+    db.query("DELETE FROM footprints WHERE id > 499995")
+    db.query("DELETE FROM entries WHERE id > 500000")
+    db.query("DELETE FROM comments WHERE id > 1500000")
   end
 end
