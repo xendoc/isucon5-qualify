@@ -47,7 +47,7 @@ class Isucon5::WebApp < Sinatra::Base
           socket: ENV['RACK_ENV'] == 'development' ? '/tmp/mysql.sock' : '/var/run/mysqld/mysqld.sock'
         },
         kvs: {
-          path: ENV['RACK_ENV'] == 'development' ? '/tmp/redis.sock' : '/var/run/redis/redis.sock'
+          path: '/tmp/redis.sock'
         }
       }
     end
