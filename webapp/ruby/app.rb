@@ -340,6 +340,11 @@ SQL
 
   get '/diary/entry/:entry_id' do
     authenticated!
+    cache = kvs.hgetall("html:entry:#{params['entry_id']}")
+    unless cache.empty?
+      mark_footprint(cache['owner_id'])
+      return cache['html']
+    end
     entry = db.xquery('SELECT * FROM entries WHERE id = ?', params['entry_id']).first
     raise Isucon5::ContentNotFound unless entry
     owner = get_user(entry[:user_id])
@@ -347,7 +352,11 @@ SQL
     raise Isucon5::PermissionDenied if entry[:is_private] && !permitted?(owner[:id])
     comments = db.xquery('SELECT * FROM comments WHERE entry_id = ?', entry[:id])
     mark_footprint(owner[:id])
-    erb :entry, locals: { owner: owner, entry: entry, comments: comments }
+    html = erb(:entry, locals: { owner: owner, entry: entry, comments: comments })
+    unless entry[:is_private]
+      kvs.hmset("html:entry:#{params['entry_id']}", ['html', html, 'owner_id', owner[:id]])
+    end
+    html
   end
 
   post '/diary/entry' do
@@ -365,6 +374,9 @@ SQL
     raise Isucon5::PermissionDenied if entry[:is_private] && !permitted?(entry[:user_id])
     query = 'INSERT INTO comments (entry_id, user_id, entry_user_id, entry_private, comment) VALUES (?,?,?,?,?)'
     db.xquery(query, entry[:id], current_user[:id], entry[:user_id], entry[:private], params['comment'])
+    unless entry[:is_private]
+      kvs.del("html:entry:#{params['entry_id']}")
+    end
     redirect "/diary/entry/#{entry[:id]}"
   end
 
