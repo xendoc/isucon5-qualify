@@ -4,7 +4,7 @@ require 'mysql2-cs-bind'
 require 'tilt/erubis'
 require 'erubis'
 require './users.rb'
-require 'rack-lineprof' if ENV['RACK_ENV'] == 'development'
+require 'rack-mini-profiler' if ENV['RACK_ENV'] == 'development'
 
 module Isucon5
   class AuthenticationError < StandardError; end
@@ -19,7 +19,7 @@ module Isucon5
 end
 
 class Isucon5::WebApp < Sinatra::Base
-  use Rack::Lineprof if ENV['RACK_ENV'] == 'development'
+  use Rack::MiniProfiler if ENV['RACK_ENV'] == 'development'
   use Rack::Session::Cookie,
     coder: Class.new {
       def encode(str)
