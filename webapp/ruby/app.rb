@@ -353,8 +353,8 @@ SQL
     raise Isucon5::ContentNotFound unless entry
     entry[:is_private] = (entry[:private] == 1)
     raise Isucon5::PermissionDenied if entry[:is_private] && !permitted?(entry[:user_id])
-    query = 'INSERT INTO comments (entry_id, user_id, entry_user_id, comment) VALUES (?,?,?,?)'
-    db.xquery(query, entry[:id], current_user[:id], entry[:user_id], params['comment'])
+    query = 'INSERT INTO comments (entry_id, user_id, entry_user_id, entry_private, comment) VALUES (?,?,?,?,?)'
+    db.xquery(query, entry[:id], current_user[:id], entry[:user_id], entry[:private], params['comment'])
     redirect "/diary/entry/#{entry[:id]}"
   end
 
