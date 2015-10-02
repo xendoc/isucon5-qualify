@@ -131,6 +131,7 @@ class Isucon5::WebApp < Sinatra::Base
       @friends.include?(another_id)
     end
 
+    # TODO cache
     def get_friends
       query = 'SELECT another FROM relations WHERE one = ?'
       @friends ||= db.xquery(query, session[:user_id]).map { |row| row[:another] }
@@ -147,11 +148,13 @@ class Isucon5::WebApp < Sinatra::Base
 
     def mark_footprint(user_id)
       if user_id != current_user[:id]
-        query = <<SQL
+        Thread.new do
+          query = <<SQL
 REPLACE INTO footprints (user_id,owner_id,date)
 VALUES (?,?,DATE(NOW()))
 SQL
-        db.xquery(query, user_id, current_user[:id])
+          db.xquery(query, user_id, current_user[:id])
+        end
       end
     end
 
@@ -271,6 +274,7 @@ SQL
     erb :index, locals: locals
   end
 
+  # cache
   get '/profile/:account_name' do
     authenticated!
     owner = user_from_account(params['account_name'])
@@ -290,6 +294,7 @@ SQL
     erb :profile, locals: { owner: owner, profile: prof, entries: entries, private: permitted }
   end
 
+  # destroy cache '/', '/profile/:account_name'
   post '/profile/:account_name' do
     authenticated!
     raise Isucon5::PermissionDenied if params['account_name'] != current_user[:account_name]
