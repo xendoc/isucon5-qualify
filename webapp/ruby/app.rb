@@ -393,8 +393,8 @@ SQL
       user = user_from_account(params['account_name'])
       raise Isucon5::ContentNotFound unless user
       t = Time.now.strftime("%F %T")
-      kvs.mset("friends:#{current_user[:id]}", user[:id], t)
-      kvs.mset("friends:#{user[:id]}", current_user[:id], t)
+      kvs.hset("friends:#{current_user[:id]}", user[:id], t)
+      kvs.hset("friends:#{user[:id]}", current_user[:id], t)
       redirect '/friends'
     end
   end
