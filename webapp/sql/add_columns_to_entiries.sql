@@ -7,6 +7,7 @@ CREATE TABLE `entries2` (
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `user_id_created_at` (`user_id`,`created_at`),
+  KEY `created_at_user_id` (`created_at`,`user_id`),
   KEY `user_id_private_created_at` (`user_id`, `private`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 INSERT INTO `entries2` (`id`,`user_id`,`private`,`title`,`content`,`created_at`)
