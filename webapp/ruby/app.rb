@@ -155,6 +155,7 @@ class Isucon5::WebApp < Sinatra::Base
     def mark_footprint(user_id)
       if user_id != current_user[:id]
         Thread.new do
+          kvs.del("html:footprints:#{user_id}")
           query = <<SQL
 REPLACE INTO footprints (user_id,owner_id,date)
 VALUES (?,?,DATE(NOW()))
@@ -369,6 +370,8 @@ SQL
 
   get '/footprints' do
     authenticated!
+    html = kvs.get("html:footprints:#{current_user[:id]}")
+    return html if html
     query = <<SQL
 SELECT user_id, owner_id, date, created_at as updated
 FROM footprints
@@ -378,7 +381,9 @@ ORDER BY created_at DESC
 LIMIT 50
 SQL
     footprints = db.xquery(query, current_user[:id])
-    erb :footprints, locals: { footprints: footprints }
+    html = erb(:footprints, locals: { footprints: footprints })
+    kvs.setex("html:footprints:#{current_user[:id]}", 60, html)
+    html
   end
 
   get '/friends' do
