@@ -440,13 +440,12 @@ SQL
 
 
   get '/kvs' do
-    # kvs.flushall
+    kvs.flushall
 
     db.query("DELETE FROM relations WHERE id > 500000")
     db.query("DELETE FROM footprints WHERE id > 499995")
     db.query("DELETE FROM entries WHERE id > 500000")
     db.query("DELETE FROM comments WHERE id > 1500000")
-=begin
     # init friends
     USER_IDS.keys.each do |id|
       # 古い順で取得
@@ -455,7 +454,7 @@ SQL
       db.xquery(query, id).each { |row| list.push row[:another], row[:created_at] }
       kvs.hmset("friends:#{id}", list)
     end
-
+=begin
     # TODO init entries
     db.query('SELECT * FROM entries WHERE private = 0').each do |entry|
       owner = get_user(entry[:user_id])
@@ -468,15 +467,8 @@ SQL
     USER_IDS.keys.each do |id|
       set_index_html(id)
     end
-
-    # TODO init footprints
-
     ""
   end
-
-
-
-
 
   def set_index_html(id)
     profile = db.xquery('SELECT * FROM profiles WHERE user_id = ?', id).first
