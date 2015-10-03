@@ -208,7 +208,10 @@ SQL
   get '/' do
     authenticated!
     html = kvs.get("html:index:#{current_user[:id]}")
-    return html if html
+    if html
+      kvs.expire("html:index:#{current_user[:id]}", 2)
+      return html
+    end
     profile = db.xquery('SELECT * FROM profiles WHERE user_id = ?', current_user[:id]).first
     entries_query = 'SELECT id,title FROM entries WHERE user_id = ? ORDER BY created_at LIMIT 5'
     entries = db.xquery(entries_query, current_user[:id]).map do |entry|
@@ -281,7 +284,7 @@ SQL
       footprints: footprints
     }
     html = erb(:index, locals: locals)
-    kvs.setex("html:index:#{current_user[:id]}", 1, html)
+    kvs.setex("html:index:#{current_user[:id]}", 2, html)
     html
   end
 
@@ -394,7 +397,7 @@ LIMIT 50
 SQL
     footprints = db.xquery(query, current_user[:id])
     html = erb(:footprints, locals: { footprints: footprints })
-    kvs.setex("html:footprints:#{current_user[:id]}", 60, html)
+    kvs.set("html:footprints:#{current_user[:id]}", html)
     html
   end
 
@@ -407,7 +410,7 @@ SQL
       list.unshift([user_id.to_i, created_at])
     end
     html = erb(:friends, locals: { friends: list })
-    kvs.setex("html:friends:#{current_user[:id]}", 60, html)
+    kvs.set("html:friends:#{current_user[:id]}", html)
     html
   end
 
@@ -427,8 +430,24 @@ SQL
 
   get '/initialize' do
     kvs.flushall
-    # init friends
+    aof = ENV['RACK_ENV'] == 'development' ? '/usr/local/var/db/redis/appendonly.aof' : '/home/isucon/appendonly.aof'
+    system("redis-cli --pipe < #{aof}")
     db.query("DELETE FROM relations WHERE id > 500000")
+    db.query("DELETE FROM footprints WHERE id > 499995")
+    db.query("DELETE FROM entries WHERE id > 500000")
+    db.query("DELETE FROM comments WHERE id > 1500000")
+  end
+
+
+  get '/kvs' do
+    # kvs.flushall
+
+    db.query("DELETE FROM relations WHERE id > 500000")
+    db.query("DELETE FROM footprints WHERE id > 499995")
+    db.query("DELETE FROM entries WHERE id > 500000")
+    db.query("DELETE FROM comments WHERE id > 1500000")
+=begin
+    # init friends
     USER_IDS.keys.each do |id|
       # 古い順で取得
       query = 'SELECT another,created_at FROM relations WHERE one = ? ORDER BY created_at ASC'
@@ -436,8 +455,104 @@ SQL
       db.xquery(query, id).each { |row| list.push row[:another], row[:created_at] }
       kvs.hmset("friends:#{id}", list)
     end
-    db.query("DELETE FROM footprints WHERE id > 499995")
-    db.query("DELETE FROM entries WHERE id > 500000")
-    db.query("DELETE FROM comments WHERE id > 1500000")
+
+    # TODO init entries
+    db.query('SELECT * FROM entries WHERE private = 0').each do |entry|
+      owner = get_user(entry[:user_id])
+      comments = db.xquery('SELECT * FROM comments WHERE entry_id = ?', entry[:id])
+      html = erb(:entry, locals: { owner: owner, entry: entry, comments: comments })
+      kvs.hmset("html:entry:#{entry[:id]}", ['html', html, 'owner_id', owner[:id]])
+    end
+=end
+    # TODO init index
+    USER_IDS.keys.each do |id|
+      set_index_html(id)
+    end
+
+    # TODO init footprints
+
+    ""
   end
+
+
+
+
+
+  def set_index_html(id)
+    profile = db.xquery('SELECT * FROM profiles WHERE user_id = ?', id).first
+    entries_query = 'SELECT id,title FROM entries WHERE user_id = ? ORDER BY created_at LIMIT 5'
+    entries = db.xquery(entries_query, id).map do |entry|
+      entry[:is_private] = (entry[:private] == 1)
+      entry
+    end
+
+    comments_for_me_query = <<SQL
+SELECT user_id,comment,created_at
+FROM comments
+WHERE entry_user_id = ?
+ORDER BY created_at DESC
+LIMIT 10
+SQL
+    comments_for_me = db.xquery(comments_for_me_query, id)
+
+    friends = db.xquery('SELECT another FROM relations WHERE one = ?', id).map { |row| row[:another] }
+    entries_of_friends_query = <<SQL
+SELECT id,user_id,title,created_at
+FROM entries
+WHERE user_id IN (?)
+ORDER BY created_at DESC
+LIMIT 10
+SQL
+    entries_of_friends = db.xquery(entries_of_friends_query, [friends])
+
+    comments_of_friends = []
+    public_comments_of_friends_query = <<SQL
+SELECT id,user_id,entry_id,entry_user_id,comment,created_at,entry_private AS private
+FROM comments
+WHERE user_id in (?)
+AND entry_private = 0
+ORDER BY created_at DESC
+LIMIT 10
+SQL
+    tmp_comments_of_friends = db.xquery(public_comments_of_friends_query, [friends]).to_a
+    private_comments_of_friends_query = <<SQL
+    SELECT id,user_id,entry_id,entry_user_id,comment,created_at,entry_private AS private
+FROM comments
+WHERE user_id in (?)
+AND entry_private = 1
+ORDER BY created_at DESC
+LIMIT 10
+SQL
+    tmp_comments_of_friends.concat db.xquery(private_comments_of_friends_query, [friends]).to_a
+    tmp_comments_of_friends.sort_by { |c| c[:created_at] }.reverse.each do |comment|
+      next if comment[:private] == 1 && !permitted?(comment[:entry_user_id])
+      comments_of_friends << comment
+      break if comments_of_friends.size >= 10
+    end
+
+    footprints_query = <<SQL
+SELECT user_id, owner_id, date, created_at as updated
+FROM footprints
+WHERE user_id = ?
+GROUP BY user_id, owner_id, date
+ORDER BY created_at DESC
+LIMIT 10
+SQL
+    footprints = db.xquery(footprints_query, id)
+
+    locals = {
+      profile: profile || {},
+      entries: entries,
+      comments_for_me: comments_for_me,
+      entries_of_friends: entries_of_friends,
+      comments_of_friends: comments_of_friends,
+      friends: friends,
+      footprints: footprints
+    }
+    html = erb(:index, locals: locals)
+    kvs.set("html:index:#{id}", html)
+  end
+
+
+
 end
