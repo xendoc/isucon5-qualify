@@ -201,7 +201,10 @@ class Isucon5::WebApp < Sinatra::Base
   get '/' do
     authenticated!
     html = kvs.get("html:index:#{current_user[:id]}")
-    return html if html
+    if html
+      kvs.expire("html:index:#{current_user[:id]}", 2)
+      return html
+    end
     profile = db.xquery('SELECT * FROM profiles WHERE user_id = ?', current_user[:id]).first
     entries_query = 'SELECT id,title FROM entries WHERE user_id = ? ORDER BY created_at LIMIT 5'
     entries = db.xquery(entries_query, current_user[:id]).map do |entry|
@@ -266,7 +269,7 @@ SQL
       footprints: footprints
     }
     html = erb(:index, locals: locals)
-    kvs.setex("html:index:#{current_user[:id]}", 1, html)
+    kvs.setex("html:index:#{current_user[:id]}", 2, html)
     html
   end
 
@@ -408,6 +411,7 @@ SQL
       'redis-cli --pipe < /usr/local/var/db/redis/appendonly.aof' :
       '/usr/bin/redis-cli --pipe < /home/isucon/appendonly.aof'
     system(command)
+
     db.query("DELETE FROM entries WHERE id > 500000")
     db.query("DELETE FROM comments WHERE id > 1500000")
   end
