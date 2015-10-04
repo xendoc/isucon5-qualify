@@ -153,7 +153,7 @@ class Isucon5::WebApp < Sinatra::Base
 
     def mark_footprint(user_id)
       if user_id != current_user[:id]
-#        kvs.del("html:footprints:#{user_id}")
+        kvs.del("html:footprints:#{user_id}")
         kvs.zadd("footprints:sorted:#{user_id}", Time.now.to_i, current_user[:id])
       end
     end
@@ -367,27 +367,25 @@ SQL
 
   get '/footprints' do
     authenticated!
-#    html = kvs.get("html:footprints:#{current_user[:id]}")
-#    return html if html
+    html = kvs.get("html:footprints:#{current_user[:id]}")
+    return html if html
     footprints = kvs.zrevrange("footprints:sorted:#{current_user[:id]}", 0, 49, with_scores: true)
-#    html = erb(:footprints, locals: { footprints: footprints })
-#    kvs.setex("html:footprints:#{current_user[:id]}", 60, html)
-#    html
-    erb:footprints, locals: { footprints: footprints }
+    html = erb(:footprints, locals: { footprints: footprints })
+    kvs.setex("html:footprints:#{current_user[:id]}", 60, html)
+    html
   end
 
   get '/friends' do
     authenticated!
-#    html = kvs.get("html:friends:#{current_user[:id]}")
-#    return html if html
+    html = kvs.get("html:friends:#{current_user[:id]}")
+    return html if html
     list = []
     kvs.hgetall("relations:#{current_user[:id]}").each do |user_id, created_at|
       list.unshift([user_id.to_i, Time.at(created_at.to_i).strftime('%F %T')])
     end
-#    html = erb(:friends, locals: { friends: list })
-#    kvs.setex("html:friends:#{current_user[:id]}", 60, html)
-#    html
-    erb :friends, locals: { friends: list }
+    html = erb(:friends, locals: { friends: list })
+    kvs.setex("html:friends:#{current_user[:id]}", 60, html)
+    html
   end
 
   post '/friends/:account_name' do
@@ -397,9 +395,9 @@ SQL
       raise Isucon5::ContentNotFound unless user
       t = Time.now.to_i
       kvs.hset("relations:#{current_user[:id]}", user[:id], t)
-#      kvs.del("html:friends:#{current_user[:id]}")
+      kvs.del("html:friends:#{current_user[:id]}")
       kvs.hset("relations:#{user[:id]}", current_user[:id], t)
-#      kvs.del("html:friends:#{user[:id]}")
+      kvs.del("html:friends:#{user[:id]}")
       redirect '/friends'
     end
   end
