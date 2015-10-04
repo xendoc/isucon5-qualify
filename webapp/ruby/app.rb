@@ -371,7 +371,7 @@ SQL
     return html if html
     footprints = kvs.zrevrange("footprints:sorted:#{current_user[:id]}", 0, 49, with_scores: true)
     html = erb(:footprints, locals: { footprints: footprints })
-    kvs.setex("html:footprints:#{current_user[:id]}", 60, html)
+    kvs.set("html:footprints:#{current_user[:id]}", html)
     html
   end
 
@@ -384,7 +384,7 @@ SQL
       list.unshift([user_id.to_i, Time.at(created_at.to_i).strftime('%F %T')])
     end
     html = erb(:friends, locals: { friends: list })
-    kvs.setex("html:friends:#{current_user[:id]}", 60, html)
+    kvs.set("html:friends:#{current_user[:id]}", html)
     html
   end
 
@@ -412,6 +412,13 @@ SQL
       list = []
       db.xquery(query, id).each { |row| list.push row[:another], row[:created_at].to_i }
       kvs.hmset("relations:#{id}", list)
+
+      # html cache
+      list = []
+      kvs.hgetall("relations:#{id}").each do |user_id, created_at|
+        list.unshift([user_id.to_i, Time.at(created_at.to_i).strftime('%F %T')])
+      end
+      kvs.set("html:friends:#{current_user[:id]}", erb(:friends, locals: { friends: list }))
     end
     db.query("DELETE FROM footprints WHERE id > 500000")
     USER_IDS.keys.each do |id|
