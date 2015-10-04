@@ -139,9 +139,8 @@ class Isucon5::WebApp < Sinatra::Base
       @friends.include?(another_id.to_s)
     end
 
-    # TODO cache
     def get_friends
-      @friends ||= kvs.hkeys("friends:#{session[:user_id]}")
+      @friends ||= kvs.hkeys("relations:#{session[:user_id]}")
     end
 
     def is_friend_account?(account_name)
@@ -154,6 +153,9 @@ class Isucon5::WebApp < Sinatra::Base
 
     def mark_footprint(user_id)
       if user_id != current_user[:id]
+        kvs.del("html:footprints:#{user_id}")
+        kvs.zadd("footprints:sorted:#{user_id}", Time.now.to_i, current_user[:id])
+=begin
         Thread.new do
           kvs.del("html:footprints:#{user_id}")
           query = <<SQL
@@ -162,6 +164,7 @@ VALUES (?,?,DATE(NOW()))
 SQL
           db.xquery(query, user_id, current_user[:id])
         end
+=end
       end
     end
 
@@ -384,15 +387,7 @@ SQL
     authenticated!
     html = kvs.get("html:footprints:#{current_user[:id]}")
     return html if html
-    query = <<SQL
-SELECT user_id, owner_id, date, created_at as updated
-FROM footprints
-WHERE user_id = ?
-GROUP BY user_id, owner_id, date
-ORDER BY created_at DESC
-LIMIT 50
-SQL
-    footprints = db.xquery(query, current_user[:id])
+    footprints = kvs.zrevrange("footprints:sorted:#{current_user[:id]}", 0, 49, with_scores: true)
     html = erb(:footprints, locals: { footprints: footprints })
     kvs.setex("html:footprints:#{current_user[:id]}", 60, html)
     html
@@ -403,8 +398,8 @@ SQL
     html = kvs.get("html:friends:#{current_user[:id]}")
     return html if html
     list = []
-    kvs.hgetall("friends:#{current_user[:id]}").each do |user_id, created_at|
-      list.unshift([user_id.to_i, created_at])
+    kvs.hgetall("relations:#{current_user[:id]}").each do |user_id, created_at|
+      list.unshift([user_id.to_i, Time.at(created_at.to_i).strftime('%F %T')])
     end
     html = erb(:friends, locals: { friends: list })
     kvs.setex("html:friends:#{current_user[:id]}", 60, html)
@@ -416,10 +411,10 @@ SQL
     unless is_friend_account?(params['account_name'])
       user = user_from_account(params['account_name'])
       raise Isucon5::ContentNotFound unless user
-      t = Time.now.strftime("%F %T")
-      kvs.hset("friends:#{current_user[:id]}", user[:id], t)
+      t = Time.now.to_i
+      kvs.hset("relations:#{current_user[:id]}", user[:id], t)
       kvs.del("html:friends:#{current_user[:id]}")
-      kvs.hset("friends:#{user[:id]}", current_user[:id], t)
+      kvs.hset("relations:#{user[:id]}", current_user[:id], t)
       kvs.del("html:friends:#{user[:id]}")
       redirect '/friends'
     end
@@ -433,10 +428,24 @@ SQL
       # 古い順で取得
       query = 'SELECT another,created_at FROM relations WHERE one = ? ORDER BY created_at ASC'
       list = []
-      db.xquery(query, id).each { |row| list.push row[:another], row[:created_at] }
-      kvs.hmset("friends:#{id}", list)
+      db.xquery(query, id).each { |row| list.push row[:another], row[:created_at].to_i }
+      kvs.hmset("relations:#{id}", list)
     end
     db.query("DELETE FROM footprints WHERE id > 500000")
+    USER_IDS.keys.each do |id|
+      # 過去のデータは利用しないのでLIMIT50で十分
+      query = <<SQL
+SELECT user_id, owner_id, date, created_at as updated
+FROM footprints
+WHERE user_id = ?
+GROUP BY user_id, owner_id, date
+ORDER BY created_at DESC
+LIMIT 50
+SQL
+      list = []
+      db.xquery(query, id).each { |row| list.push row[:updated].to_i, row[:owner_id] }
+      kvs.zadd("footprints:sorted:#{id}", list)
+    end
     db.query("DELETE FROM entries WHERE id > 500000")
     db.query("DELETE FROM comments WHERE id > 1500000")
   end
