@@ -434,6 +434,10 @@ SQL
       list = []
       db.xquery(query, id).each { |row| list.push row[:updated].to_i, row[:owner_id] }
       kvs.zadd("footprints:sorted:#{id}", list)
+
+      # html cache
+      footprints = kvs.zrevrange("footprints:sorted:#{id}", 0, 49, with_scores: true)
+      kvs.set("html:footprints:#{id}", erb(:footprints, locals: { footprints: footprints }))
     end
     db.query("DELETE FROM entries WHERE id > 500000")
     db.query("DELETE FROM comments WHERE id > 1500000")
