@@ -404,41 +404,10 @@ SQL
 
   get '/initialize' do
     kvs.flushall
-    # init friends
-    db.query("DELETE FROM relations WHERE id > 500000")
-    USER_IDS.keys.each do |id|
-      # 古い順で取得
-      query = 'SELECT another,created_at FROM relations WHERE one = ? ORDER BY created_at ASC'
-      list = []
-      db.xquery(query, id).each { |row| list.push row[:another], row[:created_at].to_i }
-      kvs.hmset("relations:#{id}", list)
-
-      # html cache
-      list = []
-      kvs.hgetall("relations:#{id}").each do |user_id, created_at|
-        list.unshift([user_id.to_i, Time.at(created_at.to_i).strftime('%F %T')])
-      end
-      kvs.set("html:friends:#{id}", erb(:friends, locals: { friends: list }))
-    end
-    db.query("DELETE FROM footprints WHERE id > 500000")
-    USER_IDS.keys.each do |id|
-      # 過去のデータは利用しないのでLIMIT50で十分
-      query = <<SQL
-SELECT user_id, owner_id, date, created_at as updated
-FROM footprints
-WHERE user_id = ?
-GROUP BY user_id, owner_id, date
-ORDER BY created_at DESC
-LIMIT 50
-SQL
-      list = []
-      db.xquery(query, id).each { |row| list.push row[:updated].to_i, row[:owner_id] }
-      kvs.zadd("footprints:sorted:#{id}", list)
-
-      # html cache
-      footprints = kvs.zrevrange("footprints:sorted:#{id}", 0, 49, with_scores: true)
-      kvs.set("html:footprints:#{id}", erb(:footprints, locals: { footprints: footprints }))
-    end
+    command = ENV['RACK_ENV'] == 'development' ?
+      'redis-cli --pipe < /usr/local/var/db/redis/appendonly.aof' :
+      '/usr/bin/redis-cli --pipe < /home/isucon/appendonly.aof'
+    system(command)
     db.query("DELETE FROM entries WHERE id > 500000")
     db.query("DELETE FROM comments WHERE id > 1500000")
   end
