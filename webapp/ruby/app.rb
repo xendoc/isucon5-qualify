@@ -228,29 +228,18 @@ SQL
     entries_of_friends = db.xquery(entries_of_friends_query, [get_friends])
 
     comments_of_friends = []
-    public_comments_of_friends_query = <<SQL
-SELECT id,user_id,entry_id,entry_user_id,comment,created_at,entry_private AS private
+    comments_of_friends_query = <<SQL
+SELECT id,user_id,entry_id,entry_user_id,comment,created_at,entry_private
 FROM comments
 WHERE user_id in (?)
-AND entry_private = 0
 ORDER BY created_at DESC
-LIMIT 10
+LIMIT 20
 SQL
-    tmp_comments_of_friends = db.xquery(public_comments_of_friends_query, [get_friends]).to_a
-    private_comments_of_friends_query = <<SQL
-    SELECT id,user_id,entry_id,entry_user_id,comment,created_at,entry_private AS private
-FROM comments
-WHERE user_id in (?)
-AND entry_private = 1
-ORDER BY created_at DESC
-LIMIT 10
-SQL
-    tmp_comments_of_friends.concat db.xquery(private_comments_of_friends_query, [get_friends]).to_a
-    tmp_comments_of_friends.sort_by { |c| c[:created_at] }.reverse.each do |comment|
-      next if comment[:private] == 1 && !permitted?(comment[:entry_user_id])
-      comments_of_friends << comment
-      break if comments_of_friends.size >= 10
-    end
+     db.xquery(comments_of_friends_query, [get_friends]).each do |comment|
+       next if comment[:entry_private] == 1 && !permitted?(comment[:entry_user_id])
+       comments_of_friends << comment
+       break if comments_of_friends.size >= 10
+     end
 
     friends = get_friends
 
