@@ -418,7 +418,7 @@ SQL
       kvs.hgetall("relations:#{id}").each do |user_id, created_at|
         list.unshift([user_id.to_i, Time.at(created_at.to_i).strftime('%F %T')])
       end
-      kvs.set("html:friends:#{current_user[:id]}", erb(:friends, locals: { friends: list }))
+      kvs.set("html:friends:#{id}", erb(:friends, locals: { friends: list }))
     end
     db.query("DELETE FROM footprints WHERE id > 500000")
     USER_IDS.keys.each do |id|
