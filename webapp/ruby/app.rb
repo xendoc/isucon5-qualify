@@ -155,16 +155,6 @@ class Isucon5::WebApp < Sinatra::Base
       if user_id != current_user[:id]
         kvs.del("html:footprints:#{user_id}")
         kvs.zadd("footprints:sorted:#{user_id}", Time.now.to_i, current_user[:id])
-=begin
-        Thread.new do
-          kvs.del("html:footprints:#{user_id}")
-          query = <<SQL
-REPLACE INTO footprints (user_id,owner_id,date)
-VALUES (?,?,DATE(NOW()))
-SQL
-          db.xquery(query, user_id, current_user[:id])
-        end
-=end
       end
     end
 
@@ -264,15 +254,7 @@ SQL
 
     friends = get_friends
 
-    footprints_query = <<SQL
-SELECT user_id, owner_id, date, created_at as updated
-FROM footprints
-WHERE user_id = ?
-GROUP BY user_id, owner_id, date
-ORDER BY created_at DESC
-LIMIT 10
-SQL
-    footprints = db.xquery(footprints_query, current_user[:id])
+    footprints = kvs.zrevrange("footprints:sorted:#{current_user[:id]}", 0, 9, with_scores: true)
 
     locals = {
       profile: profile || {},
