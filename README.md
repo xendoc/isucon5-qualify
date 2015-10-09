@@ -1,3 +1,10 @@
+# Caution!!
+
+This is clone repository.
+The original is here https://github.com/isucon/isucon5-qualify
+
+こちらはクローンしたリポジトリです。
+
 # ISUCON5 予選リポジトリ
 
 ISUCON5 予選マニュアル(含レギュレーション詳細)： https://gist.github.com/tagomoris/1a2df5ab0999f5e64cff
