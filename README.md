@@ -1,9 +1,13 @@
 # Caution!!
 
-This is clone repository.
-The original is here https://github.com/isucon/isucon5-qualify
+This is cloned repository.
+The original repository https://github.com/isucon/isucon5-qualify
 
 こちらはクローンしたリポジトリです。
+
+# がんばってみた結果
+
+![Result](./ISUCON5.png "Result")
 
 # ISUCON5 予選リポジトリ
 
